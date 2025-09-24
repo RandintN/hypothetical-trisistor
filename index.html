@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-lang-key="title">Visualizador de Trisistor Ternário</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .vertex {
+      cursor: pointer;
+    }
+
+    .state-label {
+      font-size: 1.25rem; /* 20px */
+      font-weight: 700;
+      fill: #f3f4f6; /* gray-100 */
+      user-select: none;
+      pointer-events: none;
+      dominant-baseline: middle;
+    }
+
+    .socket {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes rotate-cw {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes rotate-ccw {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(-360deg);
+      }
+    }
+
+    .rotate-cw {
+      animation: rotate-cw 2s linear infinite;
+    }
+
+    .rotate-ccw {
+      animation: rotate-ccw 2s linear infinite;
+    }
+
+    .scenario-btn {
+      transition: all 0.2s ease-in-out;
+    }
+
+    .scenario-btn.active {
+      background-color: #3b82f6; /* blue-500 */
+      color: white;
+    }
+
+    .visual-container {
+      min-height: 120px;
+    }
+
+    .accordion-btn svg {
+      transition: transform 0.3s ease;
+    }
+
+    .accordion-btn.active svg {
+      transform: rotate(180deg);
+    }
+
+    .accordion-panel {
+      transition: max-height 0.5s ease-in-out;
+    }
+  </style>
+</head>
+<body
+  class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col items-center justify-center min-h-screen p-4">
+
+<button id="lang-switcher"
+        class="absolute top-4 left-4 z-10 bg-gray-200 dark:bg-gray-700 dark:text-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+  EN-US
+</button>
+
+<div class="w-full max-w-3xl p-6 md:p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl text-center">
+
+  <header class="mb-4">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white" data-lang-key="header-title">Trisistor Hipotético</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-2" data-lang-key="header-subtitle">Um visualizador para um componente
+      de 3 estados ternários balanceados.</p>
+  </header>
+
+  <div class="grid md:grid-cols-2 gap-8 items-center">
+    <!-- Coluna do Trisistor -->
+    <div class="flex flex-col items-center justify-center h-full">
+      <div class="flex justify-center items-center my-4 w-full">
+        <svg viewBox="0 0 300 260" class="w-64 h-auto">
+          <defs>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+              <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.9 0" result="glow"/>
+              <feComposite in="glow" in2="SourceGraphic" operator="over"/>
+            </filter>
+            <radialGradient id="grad-active" cx="40%" cy="40%" r="60%">
+              <stop offset="0%" style="stop-color:rgb(196, 181, 253)"/>
+              <stop offset="100%" style="stop-color:rgb(109, 40, 217)"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Triangle path connecting the sockets -->
+          <path d="M 40 50 L 260 50 L 150 225 Z" class="fill-none dark:stroke-gray-700 stroke-gray-300"
+                stroke-width="2"/>
+
+          <!-- Sockets and Labels -->
+          <g id="vertex--1" class="vertex">
+            <circle id="socket--1" cx="40" cy="50" r="16" class="socket dark:stroke-gray-600 stroke-gray-400"
+                    stroke-width="2" fill="transparent"/>
+            <text x="40" y="50" text-anchor="middle" class="state-label">-1</text>
+          </g>
+          <g id="vertex-1" class="vertex">
+            <circle id="socket-1" cx="260" cy="50" r="16" class="socket dark:stroke-gray-600 stroke-gray-400"
+                    stroke-width="2" fill="transparent"/>
+            <text x="260" y="50" text-anchor="middle" class="state-label">+1</text>
+          </g>
+          <g id="vertex-0" class="vertex">
+            <circle id="socket-0" cx="150" cy="225" r="16" class="socket dark:stroke-gray-600 stroke-gray-400"
+                    stroke-width="2" fill="transparent"/>
+            <text x="150" y="225" text-anchor="middle" class="state-label">0</text>
+          </g>
+        </svg>
+      </div>
+      <div class="mt-4 w-full">
+        <h2 id="state-display"
+            class="text-2xl font-semibold bg-gray-100 dark:bg-gray-700 rounded-lg py-3 px-4 transition-all duration-300">
+          <span data-lang-key="state-label">Estado Atual:</span> <span id="state-value"
+                                                                       class="font-bold text-blue-500 dark:text-blue-400">0</span>
+        </h2>
+      </div>
+    </div>
+
+    <!-- Coluna da Visualização -->
+    <div class="flex flex-col items-center">
+      <div class="mb-4 w-full">
+        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300" data-lang-key="scenario-title">Selecione o
+          Cenário</h3>
+        <div id="scenario-selector"
+             class="flex flex-wrap justify-center gap-2 mt-2 bg-gray-200 dark:bg-gray-700 p-1 rounded-lg">
+          <button data-scenario="motor" class="scenario-btn active px-3 py-1 text-sm font-medium rounded-md"
+                  data-lang-key="btn-motor">Motor
+          </button>
+          <button data-scenario="valve" class="scenario-btn px-3 py-1 text-sm font-medium rounded-md"
+                  data-lang-key="btn-valve">Válvula
+          </button>
+          <button data-scenario="hvac" class="scenario-btn px-3 py-1 text-sm font-medium rounded-md"
+                  data-lang-key="btn-hvac">Clima
+          </button>
+          <button data-scenario="sentiment" class="scenario-btn px-3 py-1 text-sm font-medium rounded-md"
+                  data-lang-key="btn-sentiment">Sentimento
+          </button>
+          <button data-scenario="vote" class="scenario-btn px-3 py-1 text-sm font-medium rounded-md"
+                  data-lang-key="btn-vote">Votação
+          </button>
+          <button data-scenario="market" class="scenario-btn px-3 py-1 text-sm font-medium rounded-md"
+                  data-lang-key="btn-market">Mercado
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="visual-container w-full h-32 flex items-center justify-center bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4">
+        <!-- Visuals... -->
+        <div id="visual-motor" class="text-gray-600 dark:text-gray-400">
+          <svg class="w-20 h-20" style="transform-origin: center;" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              d="M9 3.5c-.3 0-.6.1-.8.4l-6 8c-.4.5-.4 1.2 0 1.7.2.2.5.4.8.4h12c.3 0 .6-.1.8-.4.4-.5.4-1.2 0-1.7l-6-8c-.2-.3-.5-.4-.8-.4zM10 5.4l4.5 6H5.5l4.5-6z"/>
+            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 110-12 6 6 0 010 12z"
+                  transform="scale(1.2) translate(-1.6, -1.6)"/>
+          </svg>
+        </div>
+        <div id="visual-valve" class="hidden w-full h-full">
+          <div class="w-1/2 h-full bg-gray-300 dark:bg-gray-600 rounded mx-auto overflow-hidden relative">
+            <div id="valve-fluid" class="absolute bottom-0 w-full bg-blue-500 transition-all duration-500"
+                 style="height: 50%;"></div>
+          </div>
+        </div>
+        <div id="visual-hvac" class="hidden">
+          <svg id="hvac-heat" class="hidden w-20 h-20 text-red-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <svg id="hvac-neutral" class="w-20 h-20 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <svg id="hvac-cool" class="hidden w-20 h-20 text-blue-400" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 19l7-7 7 7"></path>
+          </svg>
+        </div>
+        <div id="visual-sentiment" class="hidden">
+          <svg id="sentiment-positive" class="hidden w-20 h-20 text-green-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <svg id="sentiment-neutral" class="hidden w-20 h-20 text-gray-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 14h6"></path>
+          </svg>
+          <svg id="sentiment-negative" class="hidden w-20 h-20 text-red-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div id="visual-vote" class="hidden">
+          <svg id="vote-approve" class="hidden w-20 h-20 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.562 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"></path>
+          </svg>
+          <svg id="vote-pending" class="hidden w-20 h-20 text-gray-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <svg id="vote-reject" class="hidden w-20 h-20 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.106-1.79l-.05-.025A4 4 0 0011.057 2H5.642a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.438 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.2-2.667a4 4 0 00.8-2.4z"></path>
+          </svg>
+        </div>
+        <div id="visual-market" class="hidden">
+          <!-- Up Arrow -->
+          <svg id="market-up" class="hidden w-20 h-20 text-green-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+          </svg>
+          <!-- Neutral Icon -->
+          <svg id="market-stable" class="hidden w-20 h-20 text-gray-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16"></path>
+          </svg>
+          <!-- Down Arrow -->
+          <svg id="market-down" class="hidden w-20 h-20 text-red-500" fill="none" stroke="currentColor"
+               viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+          </svg>
+        </div>
+      </div>
+      <p id="visual-description" class="text-sm text-gray-500 dark:text-gray-400 mt-2 h-5"></p>
+    </div>
+  </div>
+</div>
+
+<div class="w-full max-w-3xl mt-8">
+  <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4" data-lang-key="accordion-title">Por que o
+    Triângulo?</h2>
+  <div class="space-y-2">
+    <div>
+      <button
+        class="accordion-btn w-full flex justify-between items-center text-left p-4 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none">
+        <span class="font-semibold" data-lang-key="physical-title">Explicação Física (Realismo Estrutural)</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      <div class="accordion-panel overflow-hidden max-h-0">
+        <div class="p-4 text-left bg-gray-50 dark:bg-gray-700/50 rounded-b-lg space-y-4">
+          <p data-lang-key="physical-text-1">A geometria do triângulo equilátero é a representação mais fiel de um
+            sistema com três polos de estabilidade. No mundo físico, o triângulo é a estrutura poligonal mais rígida e
+            estável. Isso reflete um sistema onde os estados -1, 0 e +1 não são meros pontos em uma linha, mas sim três
+            "poços" de energia distintos e igualmente estáveis.</p>
+          <p data-lang-key="physical-text-2">Nenhum estado é hierarquicamente superior; cada um é um estado fundamental.
+            Isso se assemelha à disposição de átomos em redes cristalinas (como o silício, base da eletrônica) ou a
+            sistemas quânticos com três níveis de energia discretos, onde a transição entre quaisquer dois estados é
+            igualmente possível. A forma encapsula a ideia de um equilíbrio robusto e não-hierárquico.</p>
+        </div>
+      </div>
+    </div>
+    <div>
+      <button
+        class="accordion-btn w-full flex justify-between items-center text-left p-4 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none">
+        <span class="font-semibold" data-lang-key="metaphysical-title">Explicação Metafísica (Lógica e Símbolo)</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      <div class="accordion-panel overflow-hidden max-h-0">
+        <div class="p-4 text-left bg-gray-50 dark:bg-gray-700/50 rounded-b-lg space-y-4">
+          <p data-lang-key="metaphysical-text-1">Logicamente, o triângulo representa a superação da dualidade. Onde uma
+            linha representa uma oposição (-1 vs +1), o terceiro ponto (0) introduz uma síntese ou um mediador, criando
+            uma totalidade completa. Essa estrutura de 'tese, antítese e síntese' é um pilar do pensamento dialético. O
+            estado '0' não é apenas a ausência dos outros, mas o estado de equilíbrio que dá sentido à oposição.</p>
+          <p data-lang-key="metaphysical-text-2">Simbolicamente, o triângulo é um arquétipo de manifestação, harmonia e
+            criação. A base com os opostos (-1 e +1) representa a dualidade do mundo manifesto, enquanto o ápice (0)
+            representa o ponto de origem, equilíbrio ou observador neutro que os une e transcende. É a unidade mínima
+            que forma uma superfície, saindo da unidimensionalidade da oposição pura.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="w-full max-w-3xl mt-8 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+  <p><span data-lang-key="footer-license">Licença MIT</span> | <a href="https://eu.robsoncassiano.software/"
+                                                                  target="_blank" rel="noopener noreferrer"
+                                                                  class="hover:underline text-blue-500 dark:text-blue-400">Robson
+    Cassiano</a> | <span data-lang-key="footer-greeting">Vida Longa e Prospera</span> 🖖🏻</p>
+</footer>
+
+
+<script>
+  let currentState = 0;
+  let currentScenario = 'motor';
+  let currentLang = 'pt';
+
+  const stateValue = document.getElementById('state-value');
+  const visualDescription = document.getElementById('visual-description');
+  const vertices = {
+    '-1': document.getElementById('vertex--1'),
+    '0': document.getElementById('vertex-0'),
+    '1': document.getElementById('vertex-1')
+  };
+  const sockets = {
+    '-1': document.getElementById('socket--1'),
+    '0': document.getElementById('socket-0'),
+    '1': document.getElementById('socket-1')
+  };
+  const scenarioSelector = document.getElementById('scenario-selector');
+  const visuals = {
+    motor: document.getElementById('visual-motor'),
+    valve: document.getElementById('visual-valve'),
+    hvac: document.getElementById('visual-hvac'),
+    sentiment: document.getElementById('visual-sentiment'),
+    vote: document.getElementById('visual-vote'),
+    market: document.getElementById('visual-market')
+  };
+  const motorGear = visuals.motor.querySelector('svg');
+  const valveFluid = document.getElementById('valve-fluid');
+  const hvacIcons = {
+    heat: document.getElementById('hvac-heat'),
+    neutral: document.getElementById('hvac-neutral'),
+    cool: document.getElementById('hvac-cool')
+  };
+  const sentimentIcons = {
+    positive: document.getElementById('sentiment-positive'),
+    neutral: document.getElementById('sentiment-neutral'),
+    negative: document.getElementById('sentiment-negative')
+  };
+  const voteIcons = {
+    approve: document.getElementById('vote-approve'),
+    pending: document.getElementById('vote-pending'),
+    reject: document.getElementById('vote-reject')
+  };
+  const marketIcons = {
+    up: document.getElementById('market-up'),
+    stable: document.getElementById('market-stable'),
+    down: document.getElementById('market-down')
+  };
+  const langSwitcher = document.getElementById('lang-switcher');
+  const accordions = document.querySelectorAll('.accordion-btn');
+
+  const translations = {
+    pt: {
+      'title': 'Visualizador de Trisistor Ternário',
+      'header-title': 'Trisistor Hipotético',
+      'header-subtitle': 'Um visualizador para um componente de 3 estados ternários balanceados.',
+      'state-label': 'Estado Atual:',
+      'scenario-title': 'Selecione o Cenário',
+      'btn-motor': 'Motor',
+      'btn-valve': 'Válvula',
+      'btn-hvac': 'Clima',
+      'btn-sentiment': 'Sentimento',
+      'btn-vote': 'Votação',
+      'btn-market': 'Mercado',
+      'desc-motor-1': 'Motor girando (sentido horário).',
+      'desc-motor-0': 'Motor está parado.',
+      'desc-motor--1': 'Motor girando (sentido anti-horário).',
+      'desc-valve-1': 'Válvula abrindo, fluxo máximo.',
+      'desc-valve-0': 'Válvula em posição neutra.',
+      'desc-valve--1': 'Válvula fechando, fluxo mínimo.',
+      'desc-hvac-1': 'Sistema de aquecimento ligado.',
+      'desc-hvac-0': 'Sistema em modo ventilação.',
+      'desc-hvac--1': 'Sistema de refrigeração ligado.',
+      'desc-sentiment-1': 'Análise de sentimento: Positivo.',
+      'desc-sentiment-0': 'Análise de sentimento: Neutro.',
+      'desc-sentiment--1': 'Análise de sentimento: Negativo.',
+      'desc-vote-1': 'Voto: Aprovado.',
+      'desc-vote-0': 'Voto: Pendente / Abstenção.',
+      'desc-vote--1': 'Voto: Rejeitado.',
+      'desc-market-1': 'Mercado em tendência de alta.',
+      'desc-market-0': 'Mercado estável.',
+      'desc-market--1': 'Mercado em tendência de baixa.',
+      'accordion-title': 'Por que o Triângulo?',
+      'physical-title': 'Explicação Física (Realismo Estrutural)',
+      'physical-text-1': 'A geometria do triângulo equilátero é a representação mais fiel de um sistema com três polos de estabilidade. No mundo físico, o triângulo é a estrutura poligonal mais rígida e estável. Isso reflete um sistema onde os estados -1, 0 e +1 não são meros pontos em uma linha, mas sim três "poços" de energia distintos e igualmente estáveis.',
+      'physical-text-2': 'Nenhum estado é hierarquicamente superior; cada um é um estado fundamental. Isso se assemelha à disposição de átomos em redes cristalinas (como o silício, base da eletrônica) ou a sistemas quânticos com três níveis de energia discretos, onde a transição entre quaisquer dois estados é igualmente possível. A forma encapsula a ideia de um equilíbrio robusto e não-hierárquico.',
+      'metaphysical-title': 'Explicação Metafísica (Lógica e Símbolo)',
+      'metaphysical-text-1': "Logicamente, o triângulo representa a superação da dualidade. Onde uma linha representa uma oposição (-1 vs +1), o terceiro ponto (0) introduz uma síntese ou um mediador, criando uma totalidade completa. Essa estrutura de 'tese, antítese e síntese' é um pilar do pensamento dialético. O estado '0' não é apenas a ausência dos outros, mas o estado de equilíbrio que dá sentido à oposição.",
+      'metaphysical-text-2': "Simbolicamente, o triângulo é um arquétipo de manifestação, harmonia e criação. A base com os opostos (-1 e +1) representa a dualidade do mundo manifesto, enquanto o ápice (0) representa o ponto de origem, equilíbrio ou observador neutro que os une e transcende. É a unidade mínima que forma uma superfície, saindo da unidimensionalidade da oposição pura.",
+      'footer-license': 'Licença MIT',
+      'footer-greeting': 'Vida Longa e Prospera'
+    },
+    en: {
+      'title': 'Ternary Trisistor Visualizer',
+      'header-title': 'Hypothetical Trisistor',
+      'header-subtitle': 'A visualizer for a component with 3 balanced ternary states.',
+      'state-label': 'Current State:',
+      'scenario-title': 'Select Scenario',
+      'btn-motor': 'Motor',
+      'btn-valve': 'Valve',
+      'btn-hvac': 'Climate',
+      'btn-sentiment': 'Sentiment',
+      'btn-vote': 'Voting',
+      'btn-market': 'Market',
+      'desc-motor-1': 'Motor spinning (clockwise).',
+      'desc-motor-0': 'Motor is stopped.',
+      'desc-motor--1': 'Motor spinning (counter-clockwise).',
+      'desc-valve-1': 'Valve opening, maximum flow.',
+      'desc-valve-0': 'Valve in neutral position.',
+      'desc-valve--1': 'Valve closing, minimum flow.',
+      'desc-hvac-1': 'Heating system on.',
+      'desc-hvac-0': 'System in fan mode.',
+      'desc-hvac--1': 'Cooling system on.',
+      'desc-sentiment-1': 'Sentiment analysis: Positive.',
+      'desc-sentiment-0': 'Sentiment analysis: Neutral.',
+      'desc-sentiment--1': 'Sentiment analysis: Negative.',
+      'desc-vote-1': 'Vote: Approved.',
+      'desc-vote-0': 'Vote: Pending / Abstention.',
+      'desc-vote--1': 'Vote: Rejected.',
+      'desc-market-1': 'Market in an uptrend.',
+      'desc-market-0': 'Market is stable.',
+      'desc-market--1': 'Market in a downtrend.',
+      'accordion-title': 'Why the Triangle?',
+      'physical-title': 'Physical Explanation (Structural Realism)',
+      'physical-text-1': 'The geometry of the equilateral triangle is the most faithful representation of a system with three poles of stability. In the physical world, the triangle is the most rigid and stable polygonal structure. This reflects a system where states -1, 0, and +1 are not mere points on a line, but three distinct and equally stable energy wells.',
+      'physical-text-2': 'No state is hierarchically superior; each is a fundamental state. This resembles the arrangement of atoms in crystal lattices (like silicon, the basis of electronics) or quantum systems with three discrete energy levels, where the transition between any two states is equally possible. The shape encapsulates the idea of a robust and non-hierarchical equilibrium.',
+      'metaphysical-title': 'Metaphysical Explanation (Logic and Symbol)',
+      'metaphysical-text-1': "Logicamente, o triângulo representa a superação da dualidade. Onde uma linha representa uma oposição (-1 vs +1), o terceiro ponto (0) introduz uma síntese ou um mediador, criando uma totalidade completa. Essa estrutura de 'tese, antítese e síntese' é um pilar do pensamento dialético. O estado '0' não é apenas a ausência dos outros, mas o estado de equilíbrio que dá sentido à oposição.",
+      'metaphysical-text-2': "Symbolically, the triangle is an archetype of manifestation, harmony, and creation. The base with the opposites (-1 and +1) represents the duality of the manifest world, while the apex (0) represents the point of origin, balance, or the neutral observer that unites and transcends them. It is the minimum unit that forms a surface, moving beyond the one-dimensionality of pure opposition.",
+      'footer-license': 'MIT License',
+      'footer-greeting': 'Live Long and Prosper'
+    }
+  };
+
+  function setLanguage(lang) {
+    currentLang = lang;
+    document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en-US';
+    langSwitcher.textContent = lang === 'pt' ? 'EN-US' : 'PT-BR';
+
+    document.querySelectorAll('[data-lang-key]').forEach(element => {
+      const key = element.getAttribute('data-lang-key');
+      if (translations[lang][key]) {
+        element.textContent = translations[lang][key];
+      }
+    });
+    updateDescription();
+  }
+
+  function updateDescription() {
+    const descKey = `desc-${currentScenario}-${currentState}`;
+    visualDescription.textContent = translations[currentLang][descKey];
+  }
+
+  function updateMotorVisual(state) {
+    motorGear.classList.remove('rotate-cw', 'rotate-ccw');
+    if (state === 1) motorGear.classList.add('rotate-cw');
+    if (state === -1) motorGear.classList.add('rotate-ccw');
+  }
+
+  function updateValveVisual(state) {
+    const height = (state + 1) * 50;
+    valveFluid.style.height = `${height}%`;
+  }
+
+  function updateSingleIconVisual(state, icons) {
+    Object.values(icons).forEach(icon => icon.classList.add('hidden'));
+    if (state === 1) icons[Object.keys(icons)[0]].classList.remove('hidden');
+    else if (state === 0) icons[Object.keys(icons)[1]].classList.remove('hidden');
+    else if (state === -1) icons[Object.keys(icons)[2]].classList.remove('hidden');
+  }
+
+  function updateUI(newState) {
+    if (![-1, 0, 1].includes(newState)) return;
+    currentState = newState;
+    stateValue.textContent = currentState > 0 ? `+${currentState}` : currentState;
+
+    for (const state in sockets) {
+      const socket = sockets[state];
+      const isActive = (state == newState);
+
+      if (isActive) {
+        socket.style.fill = 'url(#grad-active)';
+        socket.style.filter = 'url(#glow)';
+        socket.style.stroke = 'transparent';
+      } else {
+        socket.style.fill = 'transparent';
+        socket.style.filter = 'none';
+        socket.style.stroke = ''; // Revert to stylesheet
+      }
+    }
+
+    updateDescription();
+
+    if (currentScenario === 'motor') updateMotorVisual(currentState);
+    else if (currentScenario === 'valve') updateValveVisual(currentState);
+    else if (currentScenario === 'hvac') updateSingleIconVisual(currentState, hvacIcons);
+    else if (currentScenario === 'sentiment') updateSingleIconVisual(currentState, sentimentIcons);
+    else if (currentScenario === 'vote') updateSingleIconVisual(currentState, voteIcons);
+    else if (currentScenario === 'market') updateSingleIconVisual(currentState, marketIcons);
+  }
+
+  scenarioSelector.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+    currentScenario = e.target.dataset.scenario;
+    scenarioSelector.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+    e.target.classList.add('active');
+    Object.values(visuals).forEach(v => v.classList.add('hidden'));
+    visuals[currentScenario].classList.remove('hidden');
+    updateUI(currentState);
+  });
+
+  langSwitcher.addEventListener('click', () => {
+    setLanguage(currentLang === 'pt' ? 'en' : 'pt');
+  });
+
+  vertices['-1'].addEventListener('click', () => updateUI(-1));
+  vertices['0'].addEventListener('click', () => updateUI(0));
+  vertices['1'].addEventListener('click', () => updateUI(1));
+
+  accordions.forEach(accordion => {
+    accordion.addEventListener('click', () => {
+      accordion.classList.toggle('active');
+      const panel = accordion.nextElementSibling;
+      if (panel.style.maxHeight) {
+        panel.style.maxHeight = null;
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + "px";
+      }
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setLanguage('pt');
+    updateUI(0); // Set initial state to 0
+  });
+</script>
+</body>
+</html>
