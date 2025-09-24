@@ -1,6 +1,7 @@
 {
-  "short_name": "",
-  "name": "",
+  "short_name": "Trisistor",
+  "name": "Hypothetical Trisistor",
+  "license": "MIT © 2025 Robson Cassiano",
   "icons": [{
     "src": "icon.png",
     "type": "image/png",
